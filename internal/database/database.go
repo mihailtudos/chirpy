@@ -22,6 +22,14 @@ type DBStructure struct {
 	Chirps map[int]Chirp `json:"chirps"`
 }
 
+// NotFound error type
+type NotFound struct{}
+
+// Error method implementation for NotFound
+func (e NotFound) Error() string {
+	return fmt.Sprintln("not found")
+}
+
 // NewDB creates a new database connection
 // and creates the database file if it doesn't exist
 func NewDB(path string) (*DB, error) {
@@ -31,6 +39,25 @@ func NewDB(path string) (*DB, error) {
 	}
 	err := db.ensureDB()
 	return db, err
+}
+
+func (db *DB) GetChirp(id int) (Chirp, error) {
+	if id < 1 {
+		return Chirp{}, fmt.Errorf("the id must be a positive number")
+	}
+
+	dbStr, err := db.loadDB()
+	if err != nil {
+		fmt.Println(err.Error())
+		return Chirp{}, fmt.Errorf("failed to load the DB")
+	}
+
+	chirp, ok := dbStr.Chirps[id]
+	if !ok {
+		return Chirp{}, NotFound{}
+	}
+
+	return chirp, nil
 }
 
 // CreateChirp creates a new chirp and saves it to disk
@@ -124,6 +151,6 @@ func (db *DB) writeDB(dbStructure DBStructure) error {
 	if err != nil {
 		return err
 	}
-	
+
 	return nil
 }

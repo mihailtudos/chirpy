@@ -5,11 +5,33 @@ import (
 	"errors"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/mihailtudos/chirpy/internal/database"
 	"github.com/mihailtudos/chirpy/pkg/utils"
 )
+
+func (a *apiConfig) handlerGetSingleChirp(w http.ResponseWriter, r *http.Request) {
+	chirpIDSrt := r.PathValue("chirpID")
+	id, err := strconv.Atoi(chirpIDSrt)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusBadRequest, "incorrect id provided")
+		return
+	}
+
+	chirp, err := a.db.GetChirp(id)
+	if err != nil {
+		if errors.Is(err, database.NotFound{}) {
+			utils.RespondWithError(w, http.StatusNotFound, "couldn't get chirp")
+			return
+		} else {
+			utils.RespondWithError(w, http.StatusInternalServerError, "something went wrong")
+		}
+	}
+	
+	utils.RespondWithJSON(w, http.StatusOK, chirp)
+}
 
 func (a *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
 	dbChirps, err := a.db.GetChirps()
