@@ -52,3 +52,11 @@ func InSlice(word string, words []string) bool {
 
 	return false
 }
+
+func IsPasswordValid(password string) bool {
+	if len(password) >= 4 {
+		return true
+	}
+
+	return false
+}

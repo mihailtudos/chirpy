@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"sync"
+	"time"
 )
 
 type DB struct {
@@ -13,14 +14,10 @@ type DB struct {
 	mu   *sync.RWMutex
 }
 
-type Chirp struct {
-	ID   int    `json:"id"`
-	Body string `json:"body"`
-}
-
 type DBStructure struct {
-	Chirps map[int]Chirp `json:"chirps"`
-	Users  map[int]User  `json:"users"`
+	Chirps        map[int]Chirp       `json:"chirps"`
+	Users         map[int]User        `json:"users"`
+	RevokedTokens map[Token]time.Time `json:"tokens"`
 }
 
 // NotFound error type
@@ -38,74 +35,16 @@ func NewDB(path string) (*DB, error) {
 		path: path,
 		mu:   &sync.RWMutex{},
 	}
+
 	err := db.ensureDB()
 	return db, err
 }
 
-func (db *DB) GetChirp(id int) (Chirp, error) {
-	if id < 1 {
-		return Chirp{}, fmt.Errorf("the id must be a positive number")
-	}
-
-	dbStr, err := db.loadDB()
-	if err != nil {
-		fmt.Println(err.Error())
-		return Chirp{}, fmt.Errorf("failed to load the DB")
-	}
-
-	chirp, ok := dbStr.Chirps[id]
-	if !ok {
-		return Chirp{}, NotFound{}
-	}
-
-	return chirp, nil
-}
-
-// CreateChirp creates a new chirp and saves it to disk
-func (db *DB) CreateChirp(body string) (Chirp, error) {
-	dbStructure, err := db.loadDB()
-	if err != nil {
-		fmt.Println("failed to load the db chirp records")
-		return Chirp{}, err
-	}
-
-	id := len(dbStructure.Chirps) + 1
-	chirp := Chirp{
-		ID:   id,
-		Body: body,
-	}
-
-	dbStructure.Chirps[id] = chirp
-
-	err = db.writeDB(dbStructure)
-	if err != nil {
-		fmt.Println("could not write chirps on the db")
-		return Chirp{}, err
-	}
-
-	return chirp, nil
-}
-
-// GetChirps returns all chirps in the database
-func (db *DB) GetChirps() ([]Chirp, error) {
-	dbStructure, err := db.loadDB()
-	if err != nil {
-		return nil, err
-	}
-
-	chirps := make([]Chirp, 0, len(dbStructure.Chirps))
-
-	for _, chirp := range dbStructure.Chirps {
-		chirps = append(chirps, chirp)
-	}
-
-	return chirps, nil
-}
-
 func (db *DB) createDB() error {
 	dbStructure := DBStructure{
-		Chirps: map[int]Chirp{},
-		Users:  map[int]User{},
+		Chirps:        map[int]Chirp{},
+		Users:         map[int]User{},
+		RevokedTokens: map[Token]time.Time{},
 	}
 	return db.writeDB(dbStructure)
 }

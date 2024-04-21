@@ -3,7 +3,9 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 
+	"github.com/joho/godotenv"
 	"github.com/mihailtudos/chirpy/internal/database"
 	"github.com/mihailtudos/chirpy/middleware"
 )
@@ -11,9 +13,17 @@ import (
 type apiConfig struct {
 	fileserverHits int
 	db             *database.DB
+	jwtSecret      string
 }
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	secretKey := os.Getenv("JWT_SECRET")
+
 	const filepathRoot = "."
 	const port = "8080"
 
@@ -25,6 +35,7 @@ func main() {
 	apiCfg := apiConfig{
 		fileserverHits: 0,
 		db:             db,
+		jwtSecret:      secretKey,
 	}
 
 	mux := http.NewServeMux()
@@ -38,7 +49,11 @@ func main() {
 	mux.HandleFunc("GET /api/chirps/{chirpID}", apiCfg.handlerGetSingleChirp)
 
 	mux.HandleFunc("POST /api/users", apiCfg.handlerCreateUsers)
+	mux.HandleFunc("PUT /api/users", apiCfg.handlerUpdateUser)
 
+	mux.HandleFunc("POST /api/login", apiCfg.handlerLogin)
+	mux.HandleFunc("POST /api/refresh", apiCfg.handlerRefreshTokens)
+	mux.HandleFunc("POST /api/revoke", apiCfg.handlerRevokeRefreshTokens)
 
 	corsMux := middleware.LogRequest(middlewareCors(mux))
 
