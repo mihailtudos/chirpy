@@ -3,8 +3,9 @@ package database
 import "fmt"
 
 type Chirp struct {
-	ID   int    `json:"id"`
-	Body string `json:"body"`
+	ID       int    `json:"id"`
+	Body     string `json:"body"`
+	AuthorID int    `json:"author_id"`
 }
 
 func (db *DB) GetChirp(id int) (Chirp, error) {
@@ -27,7 +28,7 @@ func (db *DB) GetChirp(id int) (Chirp, error) {
 }
 
 // CreateChirp creates a new chirp and saves it to disk
-func (db *DB) CreateChirp(body string) (Chirp, error) {
+func (db *DB) CreateChirp(body string, authorID int) (Chirp, error) {
 	dbStructure, err := db.loadDB()
 	if err != nil {
 		fmt.Println("failed to load the db chirp records")
@@ -36,8 +37,9 @@ func (db *DB) CreateChirp(body string) (Chirp, error) {
 
 	id := len(dbStructure.Chirps) + 1
 	chirp := Chirp{
-		ID:   id,
-		Body: body,
+		ID:       id,
+		Body:     body,
+		AuthorID: authorID,
 	}
 
 	dbStructure.Chirps[id] = chirp

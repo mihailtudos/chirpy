@@ -27,7 +27,7 @@ type Claims struct {
 func HandleTokenError(err error, w http.ResponseWriter) {
 	fmt.Println(err)
 
-	if errors.Is(err, jwt.ErrTokenInvalidClaims) {
+	if errors.Is(err, jwt.ErrTokenInvalidClaims) || errors.Is(err, ErrAuthHeaderMissing) {
 		utils.RespondWithError(w, http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
 	} else {
 		utils.RespondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
@@ -46,10 +46,11 @@ func (a *apiConfig) GetAuthTokenFromHeader(header http.Header) (string, error) {
 
 	return token, nil
 }
+
 func (a *apiConfig) GetTokenClaims(header http.Header, jwtSecret string) (Claims, error) {
 	token, err := a.GetAuthTokenFromHeader(header)
 	if err != nil {
-		return Claims{}, err
+		return Claims{}, ErrAuthHeaderMissing
 	}
 
 	claims := Claims{}

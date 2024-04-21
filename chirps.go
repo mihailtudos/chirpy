@@ -29,7 +29,7 @@ func (a *apiConfig) handlerGetSingleChirp(w http.ResponseWriter, r *http.Request
 			utils.RespondWithError(w, http.StatusInternalServerError, "something went wrong")
 		}
 	}
-	
+
 	utils.RespondWithJSON(w, http.StatusOK, chirp)
 }
 
@@ -43,8 +43,9 @@ func (a *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
 	chirps := []database.Chirp{}
 	for _, dbChirp := range dbChirps {
 		chirps = append(chirps, database.Chirp{
-			ID:   dbChirp.ID,
-			Body: dbChirp.Body,
+			ID:       dbChirp.ID,
+			Body:     dbChirp.Body,
+			AuthorID: dbChirp.AuthorID,
 		})
 	}
 
@@ -56,13 +57,19 @@ func (a *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *apiConfig) handlerCreateChirps(w http.ResponseWriter, r *http.Request) {
+	claims, err := a.GetTokenClaims(r.Header, a.jwtSecret)
+	if err != nil {
+		HandleTokenError(err, w)
+		return
+	}
+
 	type parameters struct {
 		Body string `json:"body"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
 	params := parameters{}
-	err := decoder.Decode(&params)
+	err = decoder.Decode(&params)
 	if err != nil {
 		utils.RespondWithError(w, http.StatusInternalServerError, "Couldn't decode parameters")
 		return
@@ -74,15 +81,22 @@ func (a *apiConfig) handlerCreateChirps(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	chirp, err := a.db.CreateChirp(cleaned)
+	userId, err := strconv.Atoi(claims.Subject)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusInternalServerError, "Couldn't decode parameters")
+		return
+	}
+
+	chirp, err := a.db.CreateChirp(cleaned, userId)
 	if err != nil {
 		utils.RespondWithError(w, http.StatusInternalServerError, "Couldn't create chirp")
 		return
 	}
 
 	utils.RespondWithJSON(w, http.StatusCreated, database.Chirp{
-		ID:   chirp.ID,
-		Body: chirp.Body,
+		ID:       chirp.ID,
+		Body:     chirp.Body,
+		AuthorID: chirp.AuthorID,
 	})
 }
 
