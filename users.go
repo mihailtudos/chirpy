@@ -10,6 +10,13 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+type User struct {
+	Email       string `json:"email"`
+	ID          int    `json:"id"`
+	Password    string `json:"-"`
+	IsChirpyRed bool   `json:"is_chirpy_red"`
+}
+
 func (a *apiConfig) handlerCreateUsers(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
 		Email    string `json:"email"`
@@ -41,12 +48,10 @@ func (a *apiConfig) handlerCreateUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utils.RespondWithJSON(w, http.StatusCreated, struct {
-		Email string `json:"email"`
-		ID    int    `json:"id"`
-	}{
-		Email: user.Email,
-		ID:    user.ID,
+	utils.RespondWithJSON(w, http.StatusCreated, User{
+		ID:          user.ID,
+		Email:       user.Email,
+		IsChirpyRed: user.IsChirpyRed,
 	})
 }
 
@@ -86,11 +91,9 @@ func (a *apiConfig) handlerUpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utils.RespondWithJSON(w, http.StatusOK, struct {
-		Email string `json:"email"`
-		ID    int    `json:"id"`
-	}{
-		Email: user.Email,
-		ID:    user.ID,
+	utils.RespondWithJSON(w, http.StatusOK, User{
+		ID:          user.ID,
+		Email:       user.Email,
+		IsChirpyRed: user.IsChirpyRed,
 	})
 }

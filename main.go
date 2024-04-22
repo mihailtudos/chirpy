@@ -14,6 +14,7 @@ type apiConfig struct {
 	fileserverHits int
 	db             *database.DB
 	jwtSecret      string
+	polkaApiKey    string
 }
 
 func main() {
@@ -23,6 +24,7 @@ func main() {
 	}
 
 	secretKey := os.Getenv("JWT_SECRET")
+	polkaApiKey := os.Getenv("POLKA_API_KEY")
 
 	const filepathRoot = "."
 	const port = "8080"
@@ -36,6 +38,7 @@ func main() {
 		fileserverHits: 0,
 		db:             db,
 		jwtSecret:      secretKey,
+		polkaApiKey:    polkaApiKey,
 	}
 
 	mux := http.NewServeMux()
@@ -44,10 +47,11 @@ func main() {
 
 	mux.HandleFunc("GET /api/healthz", handlerReadiness)
 	mux.HandleFunc("GET /api/reset", apiCfg.handlerReset)
-	
+
 	mux.HandleFunc("POST /api/chirps", apiCfg.handlerCreateChirps)
 	mux.HandleFunc("GET /api/chirps", apiCfg.handlerGetChirps)
 	mux.HandleFunc("GET /api/chirps/{chirpID}", apiCfg.handlerGetSingleChirp)
+	mux.HandleFunc("DELETE /api/chirps/{chirpID}", apiCfg.handlerDeleteChirp)
 
 	mux.HandleFunc("POST /api/users", apiCfg.handlerCreateUsers)
 	mux.HandleFunc("PUT /api/users", apiCfg.handlerUpdateUser)
@@ -56,6 +60,10 @@ func main() {
 	mux.HandleFunc("POST /api/refresh", apiCfg.handlerRefreshTokens)
 	mux.HandleFunc("POST /api/revoke", apiCfg.handlerRevokeRefreshTokens)
 
+	// hooks
+	mux.HandleFunc("POST /api/polka/webhooks", apiCfg.handlePolkaHook)
+
+	//middlewares
 	corsMux := middleware.LogRequest(middlewareCors(mux))
 
 	srv := &http.Server{

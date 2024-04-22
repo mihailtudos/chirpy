@@ -100,6 +100,38 @@ func (a *apiConfig) handlerCreateChirps(w http.ResponseWriter, r *http.Request) 
 	})
 }
 
+func (a *apiConfig) handlerDeleteChirp(w http.ResponseWriter, r *http.Request) {
+	chirpIDSrt := r.PathValue("chirpID")
+	chirpID, err := strconv.Atoi(chirpIDSrt)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusBadRequest, "incorrect id provided")
+		return
+	}
+
+	claims, err := a.GetTokenClaims(r.Header, a.jwtSecret)
+	if err != nil {
+		HandleTokenError(err, w)
+		return
+	}
+
+	userID, err := strconv.Atoi(claims.Subject)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+		return
+	}
+
+	err = a.db.DeleteChirp(chirpID, userID)
+	if err != nil {
+		if errors.Is(err, database.ErrNotAuthorized) {
+			utils.RespondWithError(w, http.StatusForbidden, http.StatusText(http.StatusForbidden))
+		} else {
+			utils.RespondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+		}
+		return
+	}
+
+	utils.RespondWithJSON(w, http.StatusOK, struct{}{})
+}
 func validateChirp(body string) (string, error) {
 	const maxChirpLength = 140
 	if len(body) > maxChirpLength {

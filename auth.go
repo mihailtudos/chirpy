@@ -42,9 +42,13 @@ func (a *apiConfig) GetAuthTokenFromHeader(header http.Header) (string, error) {
 		return "", ErrAuthHeaderMissing
 	}
 
-	token, _ := strings.CutPrefix(authorizationHeader, "Bearer ")
+	authStrings := strings.Split(authorizationHeader, " ")
+	if len(authStrings) != 2 {
+		fmt.Println(ErrAuthHeaderMissing.Error())
+		return "", ErrAuthHeaderMissing
+	}
 
-	return token, nil
+	return authStrings[1], nil
 }
 
 func (a *apiConfig) GetTokenClaims(header http.Header, jwtSecret string) (Claims, error) {
@@ -122,13 +126,15 @@ func (a *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.RespondWithJSON(w, http.StatusOK, struct {
-		ID           int    `json:"id"`
-		Email        string `json:"email"`
+		User
 		Token        string `json:"token"`
 		RefreshToken string `json:"refresh_token"`
 	}{
-		ID:           user.ID,
-		Email:        user.Email,
+		User: User{
+			ID:          user.ID,
+			Email:       user.Email,
+			IsChirpyRed: user.IsChirpyRed,
+		},
 		Token:        accessToken,
 		RefreshToken: refreshToken,
 	})

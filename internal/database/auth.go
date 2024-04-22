@@ -1,8 +1,14 @@
 package database
 
-import "time"
+import (
+	"errors"
+	"time"
+)
 
 type Token string
+
+// NotAuthorized error
+var ErrNotAuthorized error = errors.New("not authorized")
 
 func (db *DB) IsTokenRevoked(token string) (bool, error) {
 	dbStr, err := db.loadDB()
