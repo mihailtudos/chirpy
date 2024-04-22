@@ -34,24 +34,26 @@ func (a *apiConfig) handlerGetSingleChirp(w http.ResponseWriter, r *http.Request
 }
 
 func (a *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
+	authorId := r.URL.Query().Get("author_id")
+	order := r.URL.Query().Get("sort")
+
 	dbChirps, err := a.db.GetChirps()
 	if err != nil {
 		utils.RespondWithError(w, http.StatusInternalServerError, "Couldn't retrieve chirps")
 		return
 	}
 
-	chirps := []database.Chirp{}
-	for _, dbChirp := range dbChirps {
-		chirps = append(chirps, database.Chirp{
-			ID:       dbChirp.ID,
-			Body:     dbChirp.Body,
-			AuthorID: dbChirp.AuthorID,
-		})
+	chirps := dbChirps
+	if authorId != "" {
+		id, err := strconv.Atoi(authorId)
+		if err != nil {
+			utils.RespondWithError(w, http.StatusBadRequest, "author_id must be number")
+		}
+
+		chirps = filterChirpsByAuthor(dbChirps, id)
 	}
 
-	sort.Slice(chirps, func(i, j int) bool {
-		return chirps[i].ID < chirps[j].ID
-	})
+	sortChirps(chirps, order)
 
 	utils.RespondWithJSON(w, http.StatusOK, chirps)
 }
@@ -135,7 +137,7 @@ func (a *apiConfig) handlerDeleteChirp(w http.ResponseWriter, r *http.Request) {
 func validateChirp(body string) (string, error) {
 	const maxChirpLength = 140
 	if len(body) > maxChirpLength {
-		return "", errors.New("Chirp is too long")
+		return "", errors.New("chirp is too long")
 	}
 
 	badWords := map[string]struct{}{
@@ -157,4 +159,28 @@ func getCleanedBody(body string, badWords map[string]struct{}) string {
 	}
 	cleaned := strings.Join(words, " ")
 	return cleaned
+}
+
+func filterChirpsByAuthor(chirps []database.Chirp, authorId int) []database.Chirp {
+	filteredChirps := make([]database.Chirp, 0)
+	for _, c := range chirps {
+		if c.AuthorID == authorId {
+			filteredChirps = append(filteredChirps, c)
+		}
+	}
+
+	return filteredChirps
+}
+
+func sortChirps(chirps []database.Chirp, order string) {
+	if order == "desc" {
+		sort.Slice(chirps, func(i, j int) bool {
+			return chirps[i].ID > chirps[j].ID
+		})
+		return
+	}
+	
+	sort.Slice(chirps, func(i, j int) bool {
+		return chirps[i].ID < chirps[j].ID
+	})
 }
